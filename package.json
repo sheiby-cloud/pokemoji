@@ -1,0 +1,9 @@
+{
+  "name": "daremoji",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/",
+    "build-names": "node scripts/build-names.js",
+    "serve": "node scripts/serve.js"
+  }
+}

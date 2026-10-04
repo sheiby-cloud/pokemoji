@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>だれモジ</title>
+  <meta name="description" content="カタカナの名前を、1文字ごとの色ヒントで当てる非公式ファンメイドの文字当てゲーム。">
+  <meta property="og:title" content="だれモジ">
+  <meta property="og:description" content="カタカナの名前を、1文字ごとの色ヒントで当てる非公式ファンメイドの文字当てゲーム。">
+  <meta property="og:type" content="website">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <button class="icon-btn" id="btn-help" type="button" aria-label="遊び方">?</button>
+      <h1 class="title">だれモジ</h1>
+      <div class="header-right">
+        <button class="icon-btn" id="btn-stats" type="button" aria-label="成績">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11h3v9zm6.5 0V4h3v16zM17 20v-6h3v6z"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-settings" type="button" aria-label="設定">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <p class="notice" id="notice" aria-live="polite">読み込み中…</p>
+
+    <main class="main">
+      <div class="board" id="board" role="grid" aria-label="回答のマス目"></div>
+
+      <form class="entry" id="entry" autocomplete="off">
+        <ul class="suggest" id="suggest" aria-label="入力候補"></ul>
+        <div class="entry-row">
+          <input class="entry-input" id="guess" type="text" inputmode="text" enterkeyhint="send"
+                 placeholder="名前を入力" aria-label="ポケモンの名前" autocapitalize="off" spellcheck="false">
+          <button class="btn primary" id="submit" type="submit">送信</button>
+        </div>
+        <button class="btn primary next-inline" id="next-inline" type="button" hidden>次の問題へ</button>
+      </form>
+
+      <section class="used" aria-label="使った文字">
+        <div class="used-list" id="used"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>「だれモジ」は個人が制作した非公式のファンメイドゲームです。株式会社ポケモン、任天堂株式会社、株式会社クリーチャーズ、株式会社ゲームフリークとは一切関係ありません。ポケモンの名称は各権利者の商標です。権利者からの要請があった場合は速やかに公開を停止します。</p>
+      <p>連絡先: <a id="contact" href="https://x.com/" rel="noopener">X @(未設定)</a></p>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="assertive"></div>
+
+  <!-- 遊び方 -->
+  <dialog class="modal" id="dlg-help" aria-labelledby="help-title">
+    <div class="modal-head"><h2 id="help-title">遊び方</h2><button class="close" type="button" data-close aria-label="閉じる">×</button></div>
+    <p>カタカナで書かれたポケモンの名前を<strong>6回以内</strong>に当ててください。正解の文字数ははじめから分かっています。</p>
+    <p>実在するポケモンの名前で、同じ文字数のものだけ入力できます。ひらがなで入力してもかまいません。</p>
+    <p>送信すると、1文字ごとに色が変わります。</p>
+    <div class="legend">
+      <div class="legend-row"><span class="tile mini" data-state="green">ピ</span>その位置の文字が正解と一致</div>
+      <div class="legend-row"><span class="tile mini" data-state="yellow">カ</span>正解に含まれるが位置が違う</div>
+      <div class="legend-row"><span class="tile mini" data-state="gray">チ</span>正解に含まれない</div>
+    </div>
+    <p class="small">小さい文字(ュ・ッ など)、濁点・半濁点のついた文字、長音「ー」、記号もそれぞれ1文字です。「カ」と「ガ」は別の文字として判定されます。</p>
+    <p class="small">同じ文字が複数ある場合は、正解に含まれる個数分だけ色がつきます。</p>
+    <p class="small">設定で出題範囲(第◯世代まで)を変えられます。範囲が狭いほど易しくなります。</p>
+  </dialog>
+
+  <!-- 成績・結果 -->
+  <dialog class="modal" id="dlg-stats" aria-labelledby="stats-title">
+    <div class="modal-head"><h2 id="stats-title">成績</h2><button class="close" type="button" data-close aria-label="閉じる">×</button></div>
+    <div class="result" id="result" hidden>
+      <p class="result-msg" id="result-msg"></p>
+      <p class="result-answer">正解は <strong id="result-answer"></strong></p>
+    </div>
+    <div class="stats">
+      <div><b id="st-played">0</b><span>プレイ回数</span></div>
+      <div><b id="st-rate">0</b><span>勝率(%)</span></div>
+      <div><b id="st-streak">0</b><span>現在の連続正解</span></div>
+      <div><b id="st-max">0</b><span>最大連続正解</span></div>
+    </div>
+    <h3>何回目で当てたか</h3>
+    <div class="dist" id="dist"></div>
+    <div class="result-actions" id="result-actions" hidden>
+      <button class="btn" id="btn-share" type="button">結果をコピー</button>
+      <button class="btn primary" id="btn-next" type="button">次の問題へ</button>
+    </div>
+  </dialog>
+
+  <!-- 設定 -->
+  <dialog class="modal" id="dlg-settings" aria-labelledby="settings-title">
+    <div class="modal-head"><h2 id="settings-title">設定</h2><button class="close" type="button" data-close aria-label="閉じる">×</button></div>
+    <h3>出題範囲</h3>
+    <p class="small" id="gen-label"></p>
+    <div class="gens" id="gens" role="radiogroup" aria-label="第何世代まで出題するか"></div>
+    <p class="small muted" id="gen-note" hidden>解いている途中の問題はそのまま続きます。次の問題から新しい範囲で出題します。</p>
+    <h3>見た目</h3>
+    <label class="switch-row">
+      <span>高コントラスト配色<br><span class="small muted">緑をオレンジ、黄を青で表示します</span></span>
+      <input type="checkbox" id="hc" role="switch">
+    </label>
+  </dialog>
+
+  <script src="logic.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

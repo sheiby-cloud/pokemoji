@@ -1,0 +1,6 @@
+# GitHub Pages(Jekyll)で公開しないファイル
+exclude:
+  - scripts
+  - tests
+  - README.md
+  - package.json
