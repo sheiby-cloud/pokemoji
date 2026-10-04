@@ -81,7 +81,7 @@ node --test tests/
 
 `_config.yml` の `exclude` により、`scripts/` `tests/` `README.md` `package.json` は公開されません。
 
-フッターの連絡先(`index.html` の `id="contact"` のリンク)は、現在このリポジトリの Issues ページです。専用の X アカウントなどに変える場合はここを書き換えてください。
+フッターの連絡先は X の @sheiby_co_ltd です(`index.html` の `id="contact"` のリンク)。変える場合はここを書き換えてください。
 
 ## 新しいポケモンが追加されたときの names.json の更新手順
 
