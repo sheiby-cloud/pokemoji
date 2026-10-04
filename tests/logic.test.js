@@ -66,7 +66,7 @@ test('結果コピーの文字列', () => {
   ];
   assert.equal(
     L.shareText({ gen: 4, length: 4, rows, won: true, maxTries: 6 }),
-    'だれモジ 第4世代まで 4文字 4/6\n⬜🟨⬜⬜\n🟨⬜🟩⬜\n🟩🟩🟩⬜\n🟩🟩🟩🟩'
+    'ポケもじ 第4世代まで 4文字 4/6\n⬜🟨⬜⬜\n🟨⬜🟩⬜\n🟩🟩🟩⬜\n🟩🟩🟩🟩'
   );
 });
 
@@ -82,7 +82,7 @@ test('使った文字の色は最も良いものを残す', () => {
 test('結果コピーは回数設定と失敗を反映する', () => {
   const rows = Array.from({ length: 10 }, () => ({ result: [X, X, X] }));
   const t = L.shareText({ gen: 9, length: 3, rows, won: false, maxTries: 10 });
-  assert.equal(t.split('\n')[0], 'だれモジ 第9世代まで 3文字 X/10');
+  assert.equal(t.split('\n')[0], 'ポケもじ 第9世代まで 3文字 X/10');
   assert.equal(t.split('\n').length, 11);
 });
 

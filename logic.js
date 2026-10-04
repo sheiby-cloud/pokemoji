@@ -1,4 +1,4 @@
-// だれモジ 判定ロジック(UIに依存しない純粋関数)
+// ポケもじ 判定ロジック(UIに依存しない純粋関数)
 // ブラウザでは window.DaremojiLogic、Node.js では require('./logic.js') で使う。
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -116,7 +116,7 @@
   function shareText({ gen, length, rows, won, maxTries, highContrast }) {
     const e = highContrast ? EMOJI_HC : EMOJI;
     const score = won ? rows.length : 'X';
-    const head = `だれモジ 第${gen}世代まで ${length}文字 ${score}/${maxTries}`;
+    const head = `ポケもじ 第${gen}世代まで ${length}文字 ${score}/${maxTries}`;
     return [head, ...rows.map((r) => r.result.map((x) => e[x]).join(''))].join('\n');
   }
 
