@@ -136,6 +136,7 @@ a { color: var(--accent); }
 /* 入力欄 */
 .entry { width: 100%; max-width: 400px; position: relative; }
 .entry-row { display: flex; gap: 8px; }
+.entry-row[hidden] { display: none; }
 .entry-input {
   flex: 1; min-width: 0;
   height: 46px;
@@ -159,6 +160,21 @@ a { color: var(--accent); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .btn:disabled { opacity: .5; cursor: default; }
 .next-inline { width: 100%; }
+.giveup {
+  display: block;
+  margin: 8px auto 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: .85rem;
+}
+.giveup:hover { color: var(--text); }
+.giveup.confirm { border-color: #d0453b; color: #d0453b; font-weight: 700; } /* 2回目の確認待ち */
+.giveup[hidden] { display: none; }
+.answer-inline { margin: 0 0 8px; text-align: center; font-size: 1rem; }
+.answer-inline strong { font-size: 1.3rem; letter-spacing: .05em; }
 
 .suggest[hidden] { display: none; }
 .suggest {

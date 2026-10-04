@@ -142,6 +142,7 @@
   function newGame() {
     const answer = nextAnswer();
     game = { answer, rows: [], done: false, won: false };
+    resetGiveUp();
     for (const def of SETTINGS) if (def.perGame) game[def.key] = settings[def.key];
     save(KEY.game, game);
     el.guess.value = '';
@@ -267,6 +268,16 @@
     el.submit.disabled = game.done;
     el.entry.querySelector('.entry-row').hidden = game.done;
     el.nextInline.hidden = !game.done;
+    $('giveup').hidden = game.done;
+    // 負け・ギブアップのときは盤面の下に正解を出しておく
+    const ans = $('answer-inline');
+    ans.hidden = !(game.done && !game.won);
+    if (!ans.hidden) {
+      ans.textContent = game.gaveUp ? 'ギブアップ。正解は ' : '正解は ';
+      const strong = document.createElement('strong');
+      strong.textContent = game.answer;
+      ans.appendChild(strong);
+    }
   }
 
   function renderAll() {
@@ -315,11 +326,7 @@
     const result = L.judge(game.answer, guess);
     game.rows.push({ guess, result });
     const won = result.every((r) => r === L.GREEN);
-    if (won || game.rows.length >= game.maxTries) {
-      game.done = true;
-      game.won = won;
-      recordStats(won, game.rows.length);
-    }
+    if (won || game.rows.length >= game.maxTries) finishGame(won);
     save(KEY.game, game);
 
     el.guess.value = '';
@@ -339,6 +346,40 @@
         setTimeout(() => openStats(), 900);
       }
     }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : wait);
+  }
+
+  function finishGame(won, gaveUp = false) {
+    game.done = true;
+    game.won = won;
+    if (gaveUp) game.gaveUp = true;
+    recordStats(won, game.rows.length);
+  }
+
+  // ギブアップ: 1回目で確認表示、3秒以内にもう一度押すと答えを表示して終了(不正解扱い)
+  let giveUpTimer = 0;
+  function giveUp() {
+    if (busy || game.done) return;
+    const b = $('giveup');
+    if (!b.classList.contains('confirm')) {
+      b.classList.add('confirm');
+      b.textContent = 'もう一度押すと答えを表示';
+      clearTimeout(giveUpTimer);
+      giveUpTimer = setTimeout(resetGiveUp, 3000);
+      return;
+    }
+    resetGiveUp();
+    finishGame(false, true);
+    save(KEY.game, game);
+    el.guess.value = '';
+    el.suggest.innerHTML = '';
+    renderAll();
+    setTimeout(() => openStats(), 900);
+  }
+  function resetGiveUp() {
+    clearTimeout(giveUpTimer);
+    const b = $('giveup');
+    b.classList.remove('confirm');
+    b.textContent = 'ギブアップして答えを見る';
   }
 
   // ---- 成績 ----
@@ -404,7 +445,7 @@
     $('result').hidden = !finished;
     $('result-actions').hidden = !finished;
     if (finished) {
-      $('result-msg').textContent = game.won ? `${game.rows.length}回目で正解!` : '残念…';
+      $('result-msg').textContent = game.won ? `${game.rows.length}回目で正解!` : game.gaveUp ? 'ギブアップ' : '残念…';
       $('result-answer').textContent = game.answer;
       $('stats-title').textContent = '結果';
     } else {
@@ -421,6 +462,7 @@
       won: game.won,
       maxTries: game.maxTries,
       highContrast: settings.highContrast,
+      gaveUp: !!game.gaveUp,
     });
     try {
       await navigator.clipboard.writeText(text);
@@ -548,6 +590,7 @@
       openDialog(el.dlgSettings);
     });
     $('btn-share').addEventListener('click', share);
+    $('giveup').addEventListener('click', giveUp);
     const next = () => {
       if (el.dlgStats.open) el.dlgStats.close();
       newGame();

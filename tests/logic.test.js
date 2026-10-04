@@ -119,3 +119,8 @@ test('毎日の連続達成', () => {
   assert.equal(L.daysBetween('2027-02-28', '2027-03-01'), 1);
   assert.equal(L.dayKey(new Date(2026, 0, 5)), '2026-01-05');
 });
+
+test('ギブアップした結果のコピー', () => {
+  const t = L.shareText({ gen: 9, length: 5, rows: [{ result: [X, Y, X, X, G] }], won: false, maxTries: 6, gaveUp: true });
+  assert.equal(t, 'ポケもじ 第9世代まで 5文字 X/6 ギブアップ\n⬜🟨⬜⬜🟩');
+});

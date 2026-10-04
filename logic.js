@@ -157,10 +157,10 @@
 
   const EMOJI = { [GREEN]: '🟩', [YELLOW]: '🟨', [GRAY]: '⬜' };
   const EMOJI_HC = { [GREEN]: '🟧', [YELLOW]: '🟦', [GRAY]: '⬜' };
-  function shareText({ gen, length, rows, won, maxTries, highContrast }) {
+  function shareText({ gen, length, rows, won, maxTries, highContrast, gaveUp }) {
     const e = highContrast ? EMOJI_HC : EMOJI;
     const score = won ? rows.length : 'X';
-    const head = `ポケもじ 第${gen}世代まで ${length}文字 ${score}/${maxTries}`;
+    const head = `ポケもじ 第${gen}世代まで ${length}文字 ${score}/${maxTries}${gaveUp ? ' ギブアップ' : ''}`;
     return [head, ...rows.map((r) => r.result.map((x) => e[x]).join(''))].join('\n');
   }
 
