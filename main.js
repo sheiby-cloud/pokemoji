@@ -54,6 +54,15 @@
       note: (v) => `${v}回まで回答できます`,
     },
     {
+      key: 'allowShorter',
+      group: '難易度',
+      label: '短い名前も入力できる',
+      type: 'toggle',
+      default: true,
+      note: () => '答えより文字数の少ない名前も回答できます(左詰めで判定)。オフにすると同じ文字数の名前だけになります',
+      onChange: () => renderSuggest(),
+    },
+    {
       key: 'suggest',
       group: '難易度',
       label: '入力候補を表示する',
@@ -175,7 +184,10 @@
         const t = document.createElement('div');
         t.className = 'tile';
         t.setAttribute('role', 'gridcell');
-        if (data) {
+        if (data && i >= letters.length) {
+          t.classList.add('skipped'); // 短い名前で使わなかったマス
+          t.setAttribute('aria-label', '空き');
+        } else if (data) {
           t.textContent = letters[i];
           t.dataset.state = data.result[i];
           t.setAttribute('aria-label', `${letters[i]} ${stateLabel(data.result[i])}`);
@@ -242,10 +254,14 @@
     const q = L.normalize(el.guess.value);
     if (!q) return;
     const len = answerLen();
-    const pool = names.filter((n) => n.gen <= settings.maxGen && L.chars(n.name).length === len);
-    const starts = pool.filter((n) => n.name.startsWith(q));
-    const contains = pool.filter((n) => !n.name.startsWith(q) && n.name.includes(q));
-    const hits = starts.concat(contains).slice(0, MAX_SUGGEST);
+    const fits = (n) => {
+      const l = L.chars(n.name).length;
+      return settings.allowShorter ? l <= len : l === len;
+    };
+    const pool = names.filter((n) => n.gen <= settings.maxGen && fits(n));
+    // 同じ文字数の名前を優先し、次に前方一致、部分一致の順に並べる
+    const rank = (n) => (L.chars(n.name).length === len ? 0 : 2) + (n.name.startsWith(q) ? 0 : 1);
+    const hits = pool.filter((n) => n.name.includes(q)).sort((x, y) => rank(x) - rank(y)).slice(0, MAX_SUGGEST);
     if (hits.length === 1 && hits[0].name === q) return;
     for (const n of hits) {
       const li = document.createElement('li');
@@ -317,7 +333,7 @@
     if (busy || game.done) return;
     const guess = L.normalize(el.guess.value);
     if (!guess) return;
-    const err = L.validate(guess, game.answer, nameSet);
+    const err = L.validate(guess, game.answer, nameSet, { allowShorter: settings.allowShorter });
     if (err) {
       toast(err);
       shake();
@@ -325,7 +341,7 @@
     }
     const result = L.judge(game.answer, guess);
     game.rows.push({ guess, result });
-    const won = result.every((r) => r === L.GREEN);
+    const won = L.isCorrect(game.answer, guess);
     if (won || game.rows.length >= game.maxTries) finishGame(won);
     save(KEY.game, game);
 

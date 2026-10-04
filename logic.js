@@ -24,10 +24,11 @@
   }
 
   // 正解と入力を比べ、各文字の色を返す(仕様5章・重複文字は本家と同じ扱い)
+  // 入力が正解より短い場合は左詰めで比べ、入力した文字数分の結果を返す
   function judge(answer, guess) {
     const a = chars(answer);
     const g = chars(guess);
-    if (a.length !== g.length) throw new Error('文字数が違います');
+    if (g.length > a.length) throw new Error('入力が正解より長いです');
 
     const remain = new Map();
     for (const c of a) remain.set(c, (remain.get(c) || 0) + 1);
@@ -51,11 +52,20 @@
   }
 
   // 入力のチェック。問題なければ null、だめならメッセージを返す
-  function validate(guess, answer, nameSet) {
+  // allowShorter が true なら、正解より短い名前も受け付ける
+  function validate(guess, answer, nameSet, { allowShorter = false } = {}) {
     const len = chars(answer).length;
-    if (chars(guess).length !== len) return `${len}文字の名前を入力してください`;
+    const n = chars(guess).length;
+    if (allowShorter ? n > len : n !== len) {
+      return allowShorter ? `${len}文字以下の名前を入力してください` : `${len}文字の名前を入力してください`;
+    }
     if (!nameSet.has(guess)) return '図鑑にない名前です';
     return null;
+  }
+
+  // 正解は名前全体が一致したときだけ(短い入力がすべて緑でも正解ではない)
+  function isCorrect(answer, guess) {
+    return answer === guess;
   }
 
   // Fisher–Yates シャッフル
@@ -161,8 +171,9 @@
     const e = highContrast ? EMOJI_HC : EMOJI;
     const score = won ? rows.length : 'X';
     const head = `ポケもじ 第${gen}世代まで ${length}文字 ${score}/${maxTries}${gaveUp ? ' ギブアップ' : ''}`;
-    return [head, ...rows.map((r) => r.result.map((x) => e[x]).join(''))].join('\n');
+    // 短い入力の空きマスは ➖ で埋めて列をそろえる
+    return [head, ...rows.map((r) => r.result.map((x) => e[x]).join('') + '➖'.repeat(Math.max(0, length - r.result.length)))].join('\n');
   }
 
-  return { GREEN, YELLOW, GRAY, normalize, chars, judge, validate, shuffle, letterStates, shareText, kanaLayout, dayKey, daysBetween, recordDailyWin, dailyStatus };
+  return { GREEN, YELLOW, GRAY, normalize, chars, judge, validate, isCorrect, shuffle, letterStates, shareText, kanaLayout, dayKey, daysBetween, recordDailyWin, dailyStatus };
 });

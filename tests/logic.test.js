@@ -35,6 +35,23 @@ test('文字の数え方', () => {
   assert.equal(L.chars(L.normalize('ｶﾞﾗｶﾞﾗ')).length, 4);
 });
 
+test('短い名前の判定(左詰め)', () => {
+  assert.deepEqual(L.judge('ピカチュウ', 'ピチュー'), [G, Y, Y, X]);
+  assert.deepEqual(L.judge('ポリゴンZ', 'ポリゴン'), [G, G, G, G]);
+  assert.equal(L.isCorrect('ポリゴンZ', 'ポリゴン'), false); // 全部緑でも正解ではない
+  assert.equal(L.isCorrect('ピカチュウ', 'ピカチュウ'), true);
+  assert.throws(() => L.judge('イーブイ', 'ピカチュウ'));
+});
+
+test('入力チェック(短い名前を許可)', () => {
+  const set = new Set(names.map((n) => n.name));
+  const opt = { allowShorter: true };
+  assert.equal(L.validate('イーブイ', 'ライチュウ', set, opt), null);
+  assert.equal(L.validate('ピッピ', 'ライチュウ', set, opt), null);
+  assert.equal(L.validate('ピカチュウ', 'イーブイ', set, opt), '4文字以下の名前を入力してください');
+  assert.equal(L.validate('ピカピ', 'ライチュウ', set, opt), '図鑑にない名前です');
+});
+
 test('入力チェック', () => {
   const set = new Set(names.map((n) => n.name));
   assert.equal(L.validate('ピカチュウ', 'ライチュウ', set), null);
@@ -123,4 +140,9 @@ test('毎日の連続達成', () => {
 test('ギブアップした結果のコピー', () => {
   const t = L.shareText({ gen: 9, length: 5, rows: [{ result: [X, Y, X, X, G] }], won: false, maxTries: 6, gaveUp: true });
   assert.equal(t, 'ポケもじ 第9世代まで 5文字 X/6 ギブアップ\n⬜🟨⬜⬜🟩');
+});
+
+test('短い入力を含む結果コピー', () => {
+  const t = L.shareText({ gen: 9, length: 5, rows: [{ result: [G, Y, Y, X] }, { result: [G, G, G, G, G] }], won: true, maxTries: 6 });
+  assert.equal(t, 'ポケもじ 第9世代まで 5文字 2/6\n🟩🟨🟨⬜➖\n🟩🟩🟩🟩🟩');
 });

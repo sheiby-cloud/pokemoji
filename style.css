@@ -131,6 +131,12 @@ a { color: var(--accent); }
   20%, 60% { transform: translateX(-6px); }
   40%, 80% { transform: translateX(6px); }
 }
+.tile.skipped {
+  border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+  opacity: .6;
+}
 .tile.mini { --tile: 34px; display: inline-grid; flex: none; }
 
 /* 入力欄 */
