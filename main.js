@@ -206,16 +206,31 @@
     return s === L.GREEN ? '位置も一致' : s === L.YELLOW ? '位置が違う' : '含まれない';
   }
 
+  // 50音表に、これまでの判定で分かった最も良い色をつける(まだ使っていない文字は無色)
+  let kanaBlocks = [];
   function renderUsed() {
     const map = L.letterStates(game.rows);
     el.used.innerHTML = '';
-    for (const [c, s] of map) {
-      const t = document.createElement('span');
-      t.className = 'tile';
-      t.dataset.state = s;
-      t.textContent = c;
-      t.setAttribute('aria-label', `${c} ${stateLabel(s)}`);
-      el.used.appendChild(t);
+    for (const block of kanaBlocks) {
+      const grid = document.createElement('div');
+      grid.className = 'kana-block';
+      for (const col of block) {
+        for (const c of col) {
+          const t = document.createElement('span');
+          if (!c) {
+            t.className = 'kana-blank';
+            t.setAttribute('aria-hidden', 'true');
+          } else {
+            t.className = 'tile kana';
+            t.textContent = c;
+            const s = map.get(c);
+            if (s) t.dataset.state = s;
+            t.setAttribute('aria-label', `${c} ${s ? stateLabel(s) : 'まだ使っていない'}`);
+          }
+          grid.appendChild(t);
+        }
+      }
+      el.used.appendChild(grid);
     }
   }
 
@@ -536,6 +551,7 @@
       return;
     }
     nameSet = new Set(names.map((n) => L.normalize(n.name)));
+    kanaBlocks = L.kanaLayout(new Set(names.flatMap((n) => L.chars(n.name))));
 
     const resumable = game && typeof game.answer === 'string' && nameSet.has(game.answer) && Array.isArray(game.rows);
     if (resumable) {

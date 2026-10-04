@@ -81,6 +81,36 @@
     return map;
   }
 
+  // 文字一覧(50音表)の並び。1列 = 1行(ア行・カ行…)、上から a・i・u・e・o の段。空欄は ' '
+  const KANA_BLOCKS = [
+    ['アイウエオ', 'カキクケコ', 'サシスセソ', 'タチツテト', 'ナニヌネノ', 'ハヒフヘホ', 'マミムメモ', 'ヤ ユ ヨ', 'ラリルレロ', 'ワ   ヲ', 'ン    '],
+    ['ガギグゲゴ', 'ザジズゼゾ', 'ダヂヅデド', 'バビブベボ', 'パピプペポ', 'ァィゥェォ', 'ャ ュ ョ', 'ッ    ', 'ヴ    ', 'ー    '],
+  ];
+
+  // 名前に使われている文字だけを残した50音表を作る。
+  // 表にない文字(♀・♂・数字・英字など)は最後の列にまとめる。
+  // 戻り値: [[列, ...], ...](ブロックごと)。列は5文字の配列で、使われない位置は ''
+  function kanaLayout(usable) {
+    const set = new Set(usable);
+    const placed = new Set();
+    const blocks = KANA_BLOCKS.map((cols) =>
+      cols.map((col) =>
+        Array.from(col).map((c) => {
+          if (c === ' ' || !set.has(c)) return '';
+          placed.add(c);
+          return c;
+        })
+      ).filter((col) => col.some((c) => c))
+    );
+    const rest = Array.from(set).filter((c) => !placed.has(c)).sort();
+    for (let i = 0; i < rest.length; i += 5) {
+      const col = rest.slice(i, i + 5);
+      while (col.length < 5) col.push('');
+      blocks[blocks.length - 1].push(col);
+    }
+    return blocks;
+  }
+
   const EMOJI = { [GREEN]: '🟩', [YELLOW]: '🟨', [GRAY]: '⬜' };
   const EMOJI_HC = { [GREEN]: '🟧', [YELLOW]: '🟦', [GRAY]: '⬜' };
   function shareText({ gen, length, rows, won, maxTries, highContrast }) {
@@ -90,5 +120,5 @@
     return [head, ...rows.map((r) => r.result.map((x) => e[x]).join(''))].join('\n');
   }
 
-  return { GREEN, YELLOW, GRAY, normalize, chars, judge, validate, shuffle, letterStates, shareText };
+  return { GREEN, YELLOW, GRAY, normalize, chars, judge, validate, shuffle, letterStates, shareText, kanaLayout };
 });

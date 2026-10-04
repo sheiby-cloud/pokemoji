@@ -42,8 +42,14 @@
         <button class="btn primary next-inline" id="next-inline" type="button" hidden>次の問題へ</button>
       </form>
 
-      <section class="used" aria-label="使った文字">
-        <div class="used-list" id="used"></div>
+      <section class="used" aria-label="文字一覧">
+        <div class="kana-legend small muted">
+          <span><i class="dot" data-state="green"></i>一致</span>
+          <span><i class="dot" data-state="yellow"></i>位置違い</span>
+          <span><i class="dot" data-state="gray"></i>なし</span>
+          <span><i class="dot"></i>未使用</span>
+        </div>
+        <div class="kana-list" id="used"></div>
       </section>
     </main>
 

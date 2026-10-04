@@ -85,3 +85,16 @@ test('結果コピーは回数設定と失敗を反映する', () => {
   assert.equal(t.split('\n')[0], 'だれモジ 第9世代まで 3文字 X/10');
   assert.equal(t.split('\n').length, 11);
 });
+
+test('文字一覧に名前の文字がすべて1回ずつ並ぶ', () => {
+  const usable = new Set(names.flatMap((n) => L.chars(n.name)));
+  const blocks = L.kanaLayout(usable);
+  const shown = blocks.flat(2).filter((c) => c);
+  assert.equal(shown.length, usable.size);
+  assert.deepEqual(new Set(shown), usable);
+  for (const col of blocks.flat()) assert.equal(col.length, 5);
+  // 名前に使われない文字(ヲ など)は出さない
+  assert.ok(!shown.includes('ヲ'));
+  // 記号は最後の列にまとまる
+  assert.deepEqual(blocks.at(-1).at(-1).filter((c) => c).sort(), ['2', 'Z', '♀', '♂'].sort());
+});

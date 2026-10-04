@@ -177,10 +177,37 @@ a { color: var(--accent); }
 }
 .suggest button:hover, .suggest button:focus-visible { border-color: var(--accent); color: var(--accent); }
 
-/* 使った文字 */
-.used { width: 100%; max-width: 400px; }
-.used-list { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-.used-list .tile { --tile: 30px; font-size: 15px; border-width: 1px; border-radius: 4px; }
+/* 文字一覧(50音表) */
+.used { width: 100%; max-width: 420px; margin-top: 4px; }
+.kana-list { display: grid; gap: 8px; }
+.kana-block {
+  display: grid;
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+}
+.kana-list .tile, .kana-blank {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-height: 34px;
+}
+.kana-list .tile {
+  font-size: clamp(12px, 3.8vw, 16px);
+  border-width: 1px;
+  border-radius: 4px;
+  border-color: var(--line-strong);
+}
+.kana-list .tile[data-state] { border-color: transparent; }
+.kana-list .tile[data-state="gray"] { opacity: .55; }
+.kana-legend { display: flex; justify-content: center; gap: 12px; margin-bottom: 6px; }
+.kana-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--line-strong); background: var(--surface); }
+.dot[data-state] { border-color: transparent; }
+.dot[data-state="green"] { background: var(--green); }
+.dot[data-state="yellow"] { background: var(--yellow); }
+.dot[data-state="gray"] { background: var(--gray); }
 
 /* フッター */
 .footer {
