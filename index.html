@@ -58,7 +58,7 @@
   <!-- 遊び方 -->
   <dialog class="modal" id="dlg-help" aria-labelledby="help-title">
     <div class="modal-head"><h2 id="help-title">遊び方</h2><button class="close" type="button" data-close aria-label="閉じる">×</button></div>
-    <p>カタカナで書かれたポケモンの名前を<strong>6回以内</strong>に当ててください。正解の文字数ははじめから分かっています。</p>
+    <p>カタカナで書かれたポケモンの名前を<strong id="help-tries">6回以内</strong>に当ててください。正解の文字数ははじめから分かっています。</p>
     <p>実在するポケモンの名前で、同じ文字数のものだけ入力できます。ひらがなで入力してもかまいません。</p>
     <p>送信すると、1文字ごとに色が変わります。</p>
     <div class="legend">
@@ -68,7 +68,7 @@
     </div>
     <p class="small">小さい文字(ュ・ッ など)、濁点・半濁点のついた文字、長音「ー」、記号もそれぞれ1文字です。「カ」と「ガ」は別の文字として判定されます。</p>
     <p class="small">同じ文字が複数ある場合は、正解に含まれる個数分だけ色がつきます。</p>
-    <p class="small">設定で出題範囲(第◯世代まで)を変えられます。範囲が狭いほど易しくなります。</p>
+    <p class="small">設定で出題範囲(第◯世代まで)、回答できる回数(5〜12回)、入力候補の表示を変えられます。範囲が狭いほど、回数が多いほど、候補を表示するほど易しくなります。</p>
   </dialog>
 
   <!-- 成績・結果 -->
@@ -95,15 +95,9 @@
   <!-- 設定 -->
   <dialog class="modal" id="dlg-settings" aria-labelledby="settings-title">
     <div class="modal-head"><h2 id="settings-title">設定</h2><button class="close" type="button" data-close aria-label="閉じる">×</button></div>
-    <h3>出題範囲</h3>
-    <p class="small" id="gen-label"></p>
-    <div class="gens" id="gens" role="radiogroup" aria-label="第何世代まで出題するか"></div>
-    <p class="small muted" id="gen-note" hidden>解いている途中の問題はそのまま続きます。次の問題から新しい範囲で出題します。</p>
-    <h3>見た目</h3>
-    <label class="switch-row">
-      <span>高コントラスト配色<br><span class="small muted">緑をオレンジ、黄を青で表示します</span></span>
-      <input type="checkbox" id="hc" role="switch">
-    </label>
+    <p class="small muted" id="settings-note" hidden>解いている途中の問題はそのまま続きます。出題範囲と回数は次の問題から適用されます。</p>
+    <!-- 設定項目は main.js の SETTINGS から自動で作られる -->
+    <div id="settings-body"></div>
   </dialog>
 
   <script src="logic.js"></script>

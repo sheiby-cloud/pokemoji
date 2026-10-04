@@ -3,15 +3,79 @@
   'use strict';
 
   const L = window.DaremojiLogic;
-  const MAX_TRIES = 6;
   const MAX_SUGGEST = 5;
   const FLIP_MS = 220;
+  const MAX_TRIES_LIMIT = 12; // 成績の分布を何回目まで持つか(回数設定の上限と合わせる)
   const KEY = {
     settings: 'daremoji.settings',
     queue: 'daremoji.queue',
     game: 'daremoji.game',
     stats: 'daremoji.stats',
   };
+
+  const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+  // ---- 設定の定義 ----
+  // 設定項目を追加・変更するときはこの配列だけを書き換える。設定画面・保存・初期値はここから作られる。
+  //   key      : 保存名(settings[key] で参照)
+  //   group    : 設定画面の見出し
+  //   type     : 'choice'(ボタンから1つ選ぶ) / 'toggle'(オン・オフ)
+  //   options  : choice の選択肢
+  //   default  : 初期値
+  //   perGame  : true なら問題の開始時に値を固定し、途中で変えても次の問題から適用する
+  //   label / note / optionLabel / optionAria : 表示文言(関数なら現在値などを受け取る)
+  //   onChange : 値が変わったときに呼ぶ処理
+  const SETTINGS = [
+    {
+      key: 'maxGen',
+      group: '難易度',
+      label: '出題範囲',
+      type: 'choice',
+      options: range(1, 9),
+      default: 9,
+      perGame: true,
+      optionAria: (v) => `第${v}世代まで`,
+      note: (v) => `第${v}世代まで(${candidates(v).length}匹から出題)。範囲が狭いほど易しくなります`,
+      onChange: () => {
+        // 新しい範囲で出題順をシャッフルし直す
+        reshuffle(game && game.answer);
+        save(KEY.queue, queue);
+      },
+    },
+    {
+      key: 'maxTries',
+      group: '難易度',
+      label: '回答できる回数',
+      type: 'choice',
+      options: range(5, MAX_TRIES_LIMIT),
+      default: 6,
+      perGame: true,
+      optionAria: (v) => `${v}回まで`,
+      note: (v) => `${v}回まで回答できます`,
+    },
+    {
+      key: 'suggest',
+      group: '難易度',
+      label: '入力候補を表示する',
+      type: 'toggle',
+      default: true,
+      note: () => '入力中に、同じ文字数で一致する名前を最大5件表示します',
+      onChange: () => renderSuggest(),
+    },
+    {
+      key: 'highContrast',
+      group: '見た目',
+      label: '高コントラスト配色',
+      type: 'toggle',
+      default: false,
+      note: () => '緑をオレンジ、黄を青で表示します',
+      onChange: () => applyTheme(),
+    },
+  ];
+
+  function isValidSetting(def, v) {
+    return def.type === 'toggle' ? typeof v === 'boolean' : def.options.includes(v);
+  }
 
   // ---- 保存(保存できない環境でも遊べるよう try/catch) ----
   function load(key, fallback) {
@@ -31,13 +95,16 @@
   // ---- 状態 ----
   let names = [];          // [{no, name, gen}]
   let nameSet = new Set(); // 入力として受け付ける全世代の名前
-  let settings = Object.assign({ maxGen: 9, highContrast: false }, load(KEY.settings, {}));
+  const settings = (() => {
+    const saved = load(KEY.settings, {}) || {};
+    const s = {};
+    for (const def of SETTINGS) s[def.key] = isValidSetting(def, saved[def.key]) ? saved[def.key] : def.default;
+    return s;
+  })();
   let queue = load(KEY.queue, null); // { maxGen, order: [name], pos }
-  let game = load(KEY.game, null);   // { answer, gen, rows: [{guess, result}], done, won }
-  let stats = Object.assign(
-    { played: 0, wins: 0, streak: 0, maxStreak: 0, dist: [0, 0, 0, 0, 0, 0] },
-    load(KEY.stats, {})
-  );
+  let game = load(KEY.game, null);   // { answer, rows: [{guess, result}], done, won, ...perGame の設定値 }
+  let stats = Object.assign({ played: 0, wins: 0, streak: 0, maxStreak: 0, dist: [] }, load(KEY.stats, {}));
+  while (stats.dist.length < MAX_TRIES_LIMIT) stats.dist.push(0);
   let busy = false;
 
   const $ = (id) => document.getElementById(id);
@@ -46,7 +113,7 @@
     submit: $('submit'), suggest: $('suggest'), used: $('used'), toast: $('toast'),
     nextInline: $('next-inline'),
     dlgHelp: $('dlg-help'), dlgStats: $('dlg-stats'), dlgSettings: $('dlg-settings'),
-    gens: $('gens'), genLabel: $('gen-label'), genNote: $('gen-note'), hc: $('hc'),
+    settingsBody: $('settings-body'), settingsNote: $('settings-note'),
   };
 
   // ---- 出題 ----
@@ -66,8 +133,7 @@
   function nextAnswer() {
     const valid = queue && queue.maxGen === settings.maxGen && Array.isArray(queue.order) &&
       queue.order.length > 0 && queue.order.every((n) => nameSet.has(n));
-    if (!valid) reshuffle(game && game.answer);
-    else if (queue.pos >= queue.order.length) reshuffle(game && game.answer);
+    if (!valid || queue.pos >= queue.order.length) reshuffle(game && game.answer);
     const answer = queue.order[queue.pos++];
     save(KEY.queue, queue);
     return answer;
@@ -75,7 +141,8 @@
 
   function newGame() {
     const answer = nextAnswer();
-    game = { answer, gen: settings.maxGen, rows: [], done: false, won: false };
+    game = { answer, rows: [], done: false, won: false };
+    for (const def of SETTINGS) if (def.perGame) game[def.key] = settings[def.key];
     save(KEY.game, game);
     el.guess.value = '';
     renderAll();
@@ -88,13 +155,16 @@
   }
 
   function renderNotice() {
-    el.notice.textContent = `第${game.gen}世代まで・${answerLen()}文字のポケモン`;
+    el.notice.textContent = `第${game.maxGen}世代まで・${answerLen()}文字のポケモン・${game.maxTries}回まで`;
+    $('help-tries').textContent = `${game.maxTries}回以内`;
   }
 
   function renderBoard(animateRow = -1) {
     const len = answerLen();
     el.board.innerHTML = '';
-    for (let r = 0; r < MAX_TRIES; r++) {
+    el.board.style.setProperty('--rows', game.maxTries);
+    el.board.classList.toggle('compact', game.maxTries >= 9);
+    for (let r = 0; r < game.maxTries; r++) {
       const row = document.createElement('div');
       row.className = 'row';
       row.setAttribute('role', 'row');
@@ -122,7 +192,7 @@
 
   // 入力中の文字を現在の行にプレビュー表示
   function renderTyping() {
-    if (game.done || game.rows.length >= MAX_TRIES) return;
+    if (game.done || game.rows.length >= game.maxTries) return;
     const row = el.board.children[game.rows.length];
     if (!row) return;
     const letters = L.chars(L.normalize(el.guess.value));
@@ -151,7 +221,8 @@
 
   function renderSuggest() {
     el.suggest.innerHTML = '';
-    if (game.done) return;
+    el.suggest.hidden = !settings.suggest;
+    if (!settings.suggest || !game || game.done) return;
     const q = L.normalize(el.guess.value);
     if (!q) return;
     const len = answerLen();
@@ -208,6 +279,13 @@
     row.classList.add('shake');
   }
 
+  function praise(tries, max) {
+    if (tries === 1) return 'おみごと!';
+    if (tries === max) return 'ぎりぎり!';
+    const words = ['すごい!', 'やったね!', 'いいね!', 'なるほど!'];
+    return words[Math.min(words.length - 1, Math.floor(((tries - 2) / Math.max(1, max - 2)) * words.length))];
+  }
+
   function submit() {
     if (busy || game.done) return;
     const guess = L.normalize(el.guess.value);
@@ -221,7 +299,7 @@
     const result = L.judge(game.answer, guess);
     game.rows.push({ guess, result });
     const won = result.every((r) => r === L.GREEN);
-    if (won || game.rows.length >= MAX_TRIES) {
+    if (won || game.rows.length >= game.maxTries) {
       game.done = true;
       game.won = won;
       recordStats(won, game.rows.length);
@@ -238,7 +316,7 @@
       renderUsed();
       renderControls();
       if (game.done) {
-        toast(won ? ['おみごと!', 'すごい!', 'やったね!', 'いいね!', 'なるほど!', 'ぎりぎり!'][game.rows.length - 1] : `正解は「${game.answer}」`, 1500);
+        toast(won ? praise(game.rows.length, game.maxTries) : `正解は「${game.answer}」`, 1500);
         setTimeout(() => openStats(), 900);
       }
     }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : wait);
@@ -264,10 +342,13 @@
     $('st-streak').textContent = stats.streak;
     $('st-max').textContent = stats.maxStreak;
 
+    // 分布は「今の回数設定」と「これまでに当てた最大の回数」の大きいほうまで表示
+    const lastHit = stats.dist.reduce((m, n, i) => (n > 0 ? i + 1 : m), 0);
+    const shown = Math.max(game ? game.maxTries : settings.maxTries, lastHit);
     const dist = $('dist');
     dist.innerHTML = '';
     const max = Math.max(1, ...stats.dist);
-    stats.dist.forEach((n, i) => {
+    stats.dist.slice(0, shown).forEach((n, i) => {
       const row = document.createElement('div');
       row.className = 'dist-row';
       const label = document.createElement('span');
@@ -296,11 +377,11 @@
 
   async function share() {
     const text = L.shareText({
-      gen: game.gen,
+      gen: game.maxGen,
       length: answerLen(),
       rows: game.rows,
       won: game.won,
-      maxTries: MAX_TRIES,
+      maxTries: game.maxTries,
       highContrast: settings.highContrast,
     });
     try {
@@ -325,35 +406,83 @@
     document.documentElement.classList.toggle('hc', !!settings.highContrast);
   }
 
+  const text = (v, ...args) => (typeof v === 'function' ? v(...args) : v || '');
+
   function renderSettings() {
-    el.gens.innerHTML = '';
-    for (let g = 1; g <= 9; g++) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = g;
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', String(g === settings.maxGen));
-      b.setAttribute('aria-label', `第${g}世代まで`);
-      b.addEventListener('click', () => setMaxGen(g));
-      el.gens.appendChild(b);
+    const body = el.settingsBody;
+    body.innerHTML = '';
+    let group = null;
+    for (const def of SETTINGS) {
+      if (def.group !== group) {
+        group = def.group;
+        const h = document.createElement('h3');
+        h.textContent = group;
+        body.appendChild(h);
+      }
+      const value = settings[def.key];
+      const item = document.createElement('div');
+      item.className = 'setting';
+
+      if (def.type === 'toggle') {
+        const row = document.createElement('label');
+        row.className = 'switch-row';
+        const span = document.createElement('span');
+        span.textContent = def.label;
+        const note = text(def.note, value);
+        if (note) {
+          const n = document.createElement('span');
+          n.className = 'small muted setting-note';
+          n.textContent = note;
+          span.appendChild(n);
+        }
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.setAttribute('role', 'switch');
+        input.checked = value;
+        input.addEventListener('change', () => setSetting(def, input.checked));
+        row.append(span, input);
+        item.appendChild(row);
+      } else {
+        const label = document.createElement('div');
+        label.className = 'setting-label';
+        label.textContent = def.label;
+        const note = document.createElement('p');
+        note.className = 'small setting-note';
+        note.textContent = text(def.note, value);
+        const opts = document.createElement('div');
+        opts.className = 'choices';
+        opts.setAttribute('role', 'radiogroup');
+        opts.setAttribute('aria-label', def.label);
+        opts.style.setProperty('--n', def.options.length);
+        for (const o of def.options) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = text(def.optionLabel, o) || String(o);
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-checked', String(o === value));
+          if (def.optionAria) b.setAttribute('aria-label', def.optionAria(o));
+          b.addEventListener('click', () => setSetting(def, o));
+          opts.appendChild(b);
+        }
+        item.append(label, opts, note);
+      }
+      body.appendChild(item);
     }
-    const count = candidates(settings.maxGen).length;
-    el.genLabel.textContent = `第${settings.maxGen}世代まで(${count}匹から出題)`;
-    el.genNote.hidden = !(game && !game.done && game.rows.length > 0 && game.gen !== settings.maxGen);
-    el.hc.checked = !!settings.highContrast;
+    const pending = game && !game.done && game.rows.length > 0 &&
+      SETTINGS.some((d) => d.perGame && game[d.key] !== settings[d.key]);
+    el.settingsNote.hidden = !pending;
   }
 
-  function setMaxGen(g) {
-    if (g === settings.maxGen) return;
-    settings.maxGen = g;
+  function setSetting(def, value) {
+    if (settings[def.key] === value || !isValidSetting(def, value)) return;
+    settings[def.key] = value;
     save(KEY.settings, settings);
-    // 新しい範囲で出題順をシャッフルし直す(今の問題はそのまま)
-    reshuffle(game && game.answer);
-    save(KEY.queue, queue);
+    if (def.onChange) def.onChange(value);
+    if (def.perGame && game && !game.done && game.rows.length === 0) {
+      // まだ1回も入力していない問題なら、新しい設定ですぐ出し直す
+      newGame();
+    }
     renderSettings();
-    renderSuggest();
-    // まだ1回も入力していない問題なら、すぐ新しい範囲で出し直す
-    if (game && !game.done && game.rows.length === 0) newGame();
   }
 
   function openDialog(d) {
@@ -384,11 +513,6 @@
     };
     $('btn-next').addEventListener('click', next);
     el.nextInline.addEventListener('click', next);
-    el.hc.addEventListener('change', () => {
-      settings.highContrast = el.hc.checked;
-      save(KEY.settings, settings);
-      applyTheme();
-    });
     document.querySelectorAll('[data-close]').forEach((b) =>
       b.addEventListener('click', () => b.closest('dialog').close())
     );
@@ -412,11 +536,16 @@
       return;
     }
     nameSet = new Set(names.map((n) => L.normalize(n.name)));
-    if (!(settings.maxGen >= 1 && settings.maxGen <= 9)) settings.maxGen = 9;
 
-    const resumable = game && typeof game.answer === 'string' && nameSet.has(game.answer) &&
-      Array.isArray(game.rows) && Number.isInteger(game.gen);
+    const resumable = game && typeof game.answer === 'string' && nameSet.has(game.answer) && Array.isArray(game.rows);
     if (resumable) {
+      // 旧版で保存した問題(gen のみ・回数は6回固定)も再開できるようにする
+      if (game.maxGen === undefined && Number.isInteger(game.gen)) game.maxGen = game.gen;
+      if (game.maxTries === undefined) game.maxTries = 6;
+      for (const def of SETTINGS) {
+        if (def.perGame && !isValidSetting(def, game[def.key])) game[def.key] = settings[def.key];
+      }
+      save(KEY.game, game);
       renderAll();
     } else {
       newGame();

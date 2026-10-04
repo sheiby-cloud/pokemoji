@@ -78,3 +78,10 @@ test('使った文字の色は最も良いものを残す', () => {
   assert.equal(m.get('イ'), G);
   assert.equal(m.get('カ'), X);
 });
+
+test('結果コピーは回数設定と失敗を反映する', () => {
+  const rows = Array.from({ length: 10 }, () => ({ result: [X, X, X] }));
+  const t = L.shareText({ gen: 9, length: 3, rows, won: false, maxTries: 10 });
+  assert.equal(t.split('\n')[0], 'だれモジ 第9世代まで 3文字 X/10');
+  assert.equal(t.split('\n').length, 11);
+});

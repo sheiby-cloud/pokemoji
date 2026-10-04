@@ -12,7 +12,7 @@
   --accent: #2f6fdb;
   --accent-text: #ffffff;
   --shadow: 0 10px 40px rgba(0, 0, 0, .18);
-  --tile: min(56px, calc((100vw - 32px - 4 * 6px) / 5), calc((100svh - 330px) / 6 - 6px));
+  --rows: 6;
   font-family: system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -85,8 +85,15 @@ a { color: var(--accent); }
 .main { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 8px; }
 
 /* マス目 */
-.board { display: grid; gap: 6px; }
-.row { display: flex; gap: 6px; justify-content: center; }
+.board {
+  /* 行数(回答できる回数)に合わせて、スマホ縦画面に収まる大きさにする */
+  --gap: 6px;
+  --tile: max(28px, min(56px, calc((100vw - 32px - 4 * var(--gap)) / 5), calc((100svh - 330px) / var(--rows) - var(--gap))));
+  display: grid;
+  gap: var(--gap);
+}
+.board.compact { --gap: 4px; } /* 9行以上は間隔を詰める */
+.row { display: flex; gap: var(--gap); justify-content: center; }
 .tile {
   width: var(--tile); height: var(--tile);
   display: grid; place-items: center;
@@ -150,6 +157,7 @@ a { color: var(--accent); }
 .btn:disabled { opacity: .5; cursor: default; }
 .next-inline { width: 100%; }
 
+.suggest[hidden] { display: none; }
 .suggest {
   list-style: none;
   margin: 0 0 6px;
@@ -250,15 +258,19 @@ a { color: var(--accent); }
 .result-actions { display: flex; gap: 8px; margin-top: 18px; }
 .result-actions .btn { flex: 1; }
 
-.gens { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
-.gens button {
+.setting { margin-bottom: 14px; }
+.setting-label { font-weight: 700; margin-bottom: 6px; }
+.setting-note { margin: 6px 0 0; }
+.switch-row .setting-note { display: block; margin: 0; }
+.choices { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 4px; }
+.choices button {
   height: 40px;
   border: 2px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   font-weight: 700;
 }
-.gens button[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.choices button[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .switch-row input { width: 22px; height: 22px; accent-color: var(--accent); }
 
