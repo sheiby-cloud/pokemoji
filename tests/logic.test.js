@@ -98,3 +98,24 @@ test('文字一覧に名前の文字がすべて1回ずつ並ぶ', () => {
   // 記号は最後の列にまとまる
   assert.deepEqual(blocks.at(-1).at(-1).filter((c) => c).sort(), ['2', 'Z', '♀', '♂'].sort());
 });
+
+test('毎日の連続達成', () => {
+  let d = L.recordDailyWin(undefined, '2026-12-30');
+  assert.deepEqual([d.current, d.max, d.todayWins], [1, 1, 1]);
+  d = L.recordDailyWin(d, '2026-12-30'); // 同じ日にもう1問 → 日数は増えない
+  assert.deepEqual([d.current, d.todayWins], [1, 2]);
+  d = L.recordDailyWin(d, '2026-12-31');
+  d = L.recordDailyWin(d, '2027-01-01'); // 年をまたいでも続く
+  assert.deepEqual([d.current, d.max, d.todayWins], [3, 3, 1]);
+  // 表示: 今日・昨日なら連続中、2日以上空くと0
+  assert.equal(L.dailyStatus(d, '2027-01-01').doneToday, true);
+  assert.equal(L.dailyStatus(d, '2027-01-02').current, 3);
+  assert.equal(L.dailyStatus(d, '2027-01-02').doneToday, false);
+  assert.equal(L.dailyStatus(d, '2027-01-03').current, 0);
+  // 1日空けてから正解すると1からやり直し、最長は残る
+  d = L.recordDailyWin(d, '2027-01-03');
+  assert.deepEqual([d.current, d.max], [1, 3]);
+  // 3月の月末(うるう年でない)
+  assert.equal(L.daysBetween('2027-02-28', '2027-03-01'), 1);
+  assert.equal(L.dayKey(new Date(2026, 0, 5)), '2026-01-05');
+});

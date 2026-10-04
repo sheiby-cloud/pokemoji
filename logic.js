@@ -111,6 +111,50 @@
     return blocks;
   }
 
+  // ---- 毎日の連続達成 ----
+  // 日付は端末の時計で 'YYYY-MM-DD' の文字列にする
+  function dayKey(date = new Date()) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+  }
+
+  // 2つの日付文字列の差(日数)。夏時間の影響を受けないよう UTC で計算する
+  function daysBetween(a, b) {
+    const t = (k) => {
+      const [y, m, d] = k.split('-').map(Number);
+      return Date.UTC(y, m - 1, d);
+    };
+    return Math.round((t(b) - t(a)) / 86400000);
+  }
+
+  // 正解したときに呼ぶ。1日1回だけ連続日数を増やし、1日以上空いたら1からやり直す
+  // daily: { lastDay, current, max, todayWins }
+  function recordDailyWin(daily, today) {
+    const d = Object.assign({ lastDay: null, current: 0, max: 0, todayWins: 0 }, daily);
+    const gap = d.lastDay ? daysBetween(d.lastDay, today) : null;
+    if (gap === 0) {
+      d.todayWins++;
+      return d;
+    }
+    d.current = gap === 1 ? d.current + 1 : 1;
+    d.max = Math.max(d.max, d.current);
+    d.lastDay = today;
+    d.todayWins = 1;
+    return d;
+  }
+
+  // 表示用。最後に達成したのが今日か昨日なら連続中、それより前なら途切れて0
+  function dailyStatus(daily, today) {
+    const d = Object.assign({ lastDay: null, current: 0, max: 0, todayWins: 0 }, daily);
+    const gap = d.lastDay ? daysBetween(d.lastDay, today) : null;
+    return {
+      current: gap === 0 || gap === 1 ? d.current : 0,
+      max: d.max,
+      doneToday: gap === 0,
+      todayWins: gap === 0 ? d.todayWins : 0,
+    };
+  }
+
   const EMOJI = { [GREEN]: '🟩', [YELLOW]: '🟨', [GRAY]: '⬜' };
   const EMOJI_HC = { [GREEN]: '🟧', [YELLOW]: '🟦', [GRAY]: '⬜' };
   function shareText({ gen, length, rows, won, maxTries, highContrast }) {
@@ -120,5 +164,5 @@
     return [head, ...rows.map((r) => r.result.map((x) => e[x]).join(''))].join('\n');
   }
 
-  return { GREEN, YELLOW, GRAY, normalize, chars, judge, validate, shuffle, letterStates, shareText, kanaLayout };
+  return { GREEN, YELLOW, GRAY, normalize, chars, judge, validate, shuffle, letterStates, shareText, kanaLayout, dayKey, daysBetween, recordDailyWin, dailyStatus };
 });

@@ -15,7 +15,10 @@
 <body>
   <div class="app">
     <header class="header">
-      <button class="icon-btn" id="btn-help" type="button" aria-label="遊び方">?</button>
+      <div class="header-left">
+        <button class="icon-btn" id="btn-help" type="button" aria-label="遊び方">?</button>
+        <span class="day-streak" id="day-streak" hidden></span>
+      </div>
       <h1 class="title">ポケもじ</h1>
       <div class="header-right">
         <button class="icon-btn" id="btn-stats" type="button" aria-label="成績">
@@ -90,6 +93,12 @@
       <div><b id="st-streak">0</b><span>現在の連続正解</span></div>
       <div><b id="st-max">0</b><span>最大連続正解</span></div>
     </div>
+    <div class="stats days">
+      <div><b id="st-days">0</b><span>連続達成日数</span></div>
+      <div><b id="st-days-max">0</b><span>最長連続日数</span></div>
+      <div><b id="st-today">0</b><span>今日の正解数</span></div>
+    </div>
+    <p class="small muted days-note">1日に1問以上正解すると、その日を達成として数えます。</p>
     <h3>何回目で当てたか</h3>
     <div class="dist" id="dist"></div>
     <div class="result-actions" id="result-actions" hidden>

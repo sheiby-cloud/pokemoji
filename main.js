@@ -270,6 +270,7 @@
   }
 
   function renderAll() {
+    renderDaily();
     renderNotice();
     renderBoard();
     renderUsed();
@@ -330,14 +331,29 @@
       busy = false;
       renderUsed();
       renderControls();
+      renderDaily();
       if (game.done) {
-        toast(won ? praise(game.rows.length, game.maxTries) : `正解は「${game.answer}」`, 1500);
+        const msg = won ? praise(game.rows.length, game.maxTries) : `正解は「${game.answer}」`;
+        toast(newDayStreak >= 2 ? `${msg} ${newDayStreak}日連続達成!` : msg, 1500);
+        newDayStreak = 0;
         setTimeout(() => openStats(), 900);
       }
     }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : wait);
   }
 
   // ---- 成績 ----
+  let newDayStreak = 0; // 今日はじめて正解したときの連続日数(お祝い表示用)
+
+  function renderDaily() {
+    const st = L.dailyStatus(stats.daily, L.dayKey());
+    const chip = $('day-streak');
+    chip.hidden = st.current === 0;
+    chip.textContent = `🔥${st.current}`;
+    chip.classList.toggle('pending', !st.doneToday);
+    chip.title = st.doneToday ? `${st.current}日連続で達成中` : `${st.current}日連続中。今日も正解すると続きます`;
+    chip.setAttribute('aria-label', chip.title);
+  }
+
   function recordStats(won, tries) {
     stats.played++;
     if (won) {
@@ -345,6 +361,9 @@
       stats.streak++;
       stats.maxStreak = Math.max(stats.maxStreak, stats.streak);
       stats.dist[tries - 1]++;
+      const before = L.dailyStatus(stats.daily, L.dayKey());
+      stats.daily = L.recordDailyWin(stats.daily, L.dayKey());
+      newDayStreak = !before.doneToday ? stats.daily.current : 0;
     } else {
       stats.streak = 0;
     }
@@ -356,6 +375,10 @@
     $('st-rate').textContent = stats.played ? Math.round((stats.wins / stats.played) * 100) : 0;
     $('st-streak').textContent = stats.streak;
     $('st-max').textContent = stats.maxStreak;
+    const daily = L.dailyStatus(stats.daily, L.dayKey());
+    $('st-days').textContent = daily.current;
+    $('st-days-max').textContent = daily.max;
+    $('st-today').textContent = daily.todayWins;
 
     // 分布は「今の回数設定」と「これまでに当てた最大の回数」の大きいほうまで表示
     const lastHit = stats.dist.reduce((m, n, i) => (n > 0 ? i + 1 : m), 0);
@@ -514,6 +537,9 @@
     el.guess.addEventListener('input', () => {
       renderTyping();
       renderSuggest();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && game) renderDaily();
     });
     $('btn-help').addEventListener('click', () => openDialog(el.dlgHelp));
     $('btn-stats').addEventListener('click', openStats);
